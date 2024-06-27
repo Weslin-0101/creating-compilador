@@ -19,6 +19,15 @@ typedef enum {
     TOKEN_WHILE,
     TOKEN_DO,
     TOKEN_ASSIGN,
+    TOKEN_MINUS,
+    TOKEN_MULT,
+    TOKEN_DIV,
+    TOKEN_EQ,
+    TOKEN_NEQ,
+    TOKEN_LT,
+    TOKEN_LE,
+    TOKEN_GT,
+    TOKEN_GE,
     TOKEN_SEMICOLON,
     TOKEN_COLON,
     TOKEN_PERIOD,
@@ -53,6 +62,14 @@ void identifier_list();
 void parameter_list();
 void number();
 void expression();
+void assignment_statement();
+void while_statement();
+void write_statement();
+void simple_expression();
+void term();
+void factor();
+void relational_operator();
+void optional_assignment_sequence();
 
 void next_token() {
     int c = fgetc(source);
@@ -72,7 +89,6 @@ void next_token() {
             current_token.lexeme[i++] = c;
             c = fgetc(source);
         } while (isalnum(c));
-
         ungetc(c, source);
         current_token.lexeme[i] = '\0';
 
@@ -130,6 +146,18 @@ void next_token() {
         case '+':
             current_token.type = TOKEN_PLUS;
             break;
+        case '-':
+            current_token.type = TOKEN_MINUS;
+            break;
+        case '*':
+            current_token.type = TOKEN_MULT;
+            break;
+        case '/':
+            current_token.type = TOKEN_DIV;
+            break;
+        case '=':
+            current_token.type = TOKEN_EQ;
+            break;
         case ';':
             current_token.type = TOKEN_SEMICOLON;
             break;
@@ -147,10 +175,22 @@ void next_token() {
             break;
         case '<':
             c = fgetc(source);
-            if (c == '=') {
-                current_token.type = TOKEN_LESS_EQUAL;
+            if (c == '>') {
+                current_token.type = TOKEN_NEQ;
+            } else if (c == '=') {
+                current_token.type = TOKEN_LE;
             } else {
-                current_token.type = TOKEN_UNKNOWN;
+                ungetc(c, source);
+                current_token.type = TOKEN_LT;
+            }
+            break;
+        case '>':
+            c = fgetc(source);
+            if (c == '=') {
+                current_token.type = TOKEN_GE;
+            } else {
+                ungetc(c, source);
+                current_token.type = TOKEN_GT;
             }
             break;
         default:
@@ -166,6 +206,7 @@ void match(TokenType expected) {
     if (current_token.type == expected) {
         next_token();
     } else {
+        fprintf(stderr, "Expected %d, got %d\n", expected, current_token.type);
         error("Unexpected token");
     }
 }
@@ -188,13 +229,6 @@ void program() {
     if (current_token.type == TOKEN_VAR) {
         variable_declaration();
     }
-    // match(TOKEN_LPAREN);
-    // parameter_list();
-    // match(TOKEN_RPAREN);
-    // match(TOKEN_SEMICOLON);
-    // if (current_token.type == TOKEN_VAR) {
-    //     variable_declaration();
-    // }
     block();
     match(TOKEN_PERIOD);
     if (!error_flag) {
@@ -219,7 +253,11 @@ void variable_declaration() {
     while (current_token.type == TOKEN_IDENTIFIER) {
         identifier_list();
         match(TOKEN_COLON);
-        match(TOKEN_INTEGER);
+        if (current_token.type == TOKEN_INTEGER) {
+            next_token();
+        } else {
+            error("Expected type");
+        }
         match(TOKEN_SEMICOLON);
     }
 }
@@ -253,9 +291,10 @@ void statement_list() {
 void statement() {
     switch (current_token.type) {
         case TOKEN_IDENTIFIER:
-            identifier();
-            match(TOKEN_ASSIGN);
-            expression();
+            // identifier();
+            // match(TOKEN_ASSIGN);
+            // expression();
+            assignment_statement();
             break;
         case TOKEN_READ:
             match(TOKEN_READ);
@@ -270,24 +309,26 @@ void statement() {
             match(TOKEN_RPAREN);
             break;
         case TOKEN_WRITE:
-            match(TOKEN_WRITE);
-            match(TOKEN_LPAREN);
-            expression();
-            match(TOKEN_RPAREN);
-            break;
+            // match(TOKEN_WRITE);
+            // match(TOKEN_LPAREN);
+            // expression();
+            // match(TOKEN_RPAREN);
+            // break;
         case TOKEN_WRITELN:
-            match(TOKEN_WRITELN);
-            match(TOKEN_LPAREN);
-            expression();
-            match(TOKEN_RPAREN);
+            // match(TOKEN_WRITELN);
+            // match(TOKEN_LPAREN);
+            // expression();
+            // match(TOKEN_RPAREN);
+            write_statement();
             break;
         case TOKEN_WHILE:
-            match(TOKEN_WHILE);
-            expression();
-            match(TOKEN_LESS_EQUAL);
-            expression();
-            match(TOKEN_DO);
-            block();
+            // match(TOKEN_WHILE);
+            // expression();
+            // match(TOKEN_LESS_EQUAL);
+            // expression();
+            // match(TOKEN_DO);
+            // block();
+            while_statement();
             break;
         default:
             error("Unexpected statement");
@@ -299,17 +340,105 @@ void statement() {
     // match(TOKEN_RPAREN);
 }
 
-void expression() {
-    if (current_token.type == TOKEN_NUMBER) {
-        number();
-    } else if (current_token.type == TOKEN_IDENTIFIER) {
+void assignment_statement() {
+    identifier();
+    match(TOKEN_ASSIGN);
+    expression();
+    optional_assignment_sequence();
+    // while (current_token.type == TOKEN_COMMA) {
+    //     match(TOKEN_COMMA);
+    //     identifier();
+    //     match(TOKEN_ASSIGN);
+    //     expression();
+    // }
+}
+
+void optional_assignment_sequence() {
+    while (current_token.type == TOKEN_COMMA) {
+        match(TOKEN_COMMA);
         identifier();
-        if (current_token.type == TOKEN_PLUS) {
-            match(TOKEN_PLUS);
+        match(TOKEN_ASSIGN);
+        expression();
+    }
+}
+
+void while_statement() {
+    match(TOKEN_WHILE);
+    expression();
+    match(TOKEN_DO);
+    statement();
+}
+
+void write_statement() {
+    TokenType write_type = current_token.type;
+    match(write_type);
+    match(TOKEN_LPAREN);
+    expression();
+    while (current_token.type == TOKEN_COMMA) {
+        match(TOKEN_COMMA);
+        expression();
+    }
+    match(TOKEN_RPAREN);
+}
+
+void expression() {
+    simple_expression();
+    if (current_token.type == TOKEN_EQ || current_token.type == TOKEN_NEQ ||
+        current_token.type == TOKEN_LT || current_token.type == TOKEN_LE ||
+        current_token.type == TOKEN_GT || current_token.type == TOKEN_GE) {
+        relational_operator();  
+        simple_expression();
+    }
+}
+
+void simple_expression() {
+    term();
+    while (current_token.type == TOKEN_PLUS || current_token.type == TOKEN_MINUS) {
+        next_token();
+        term();
+    }
+}
+
+void term() {
+    factor();
+    while (current_token.type == TOKEN_MULT || current_token.type == TOKEN_DIV) {
+        next_token();
+        factor();
+    }
+}
+
+void factor() {
+    switch (current_token.type) {
+        case TOKEN_IDENTIFIER:
+            identifier();
+            break;
+        case TOKEN_NUMBER:
+            number();
+            break;
+        case TOKEN_LPAREN:
+            match(TOKEN_LPAREN);
             expression();
-        }
-    } else {
-        error("Expected expression");
+            match(TOKEN_RPAREN);
+            break;
+        default:
+            error("Unexpected factor");
+            break;
+    }
+}
+
+void relational_operator() {
+    switch (current_token.type) {
+        case TOKEN_EQ:
+        case TOKEN_NEQ:
+        case TOKEN_LT:
+        case TOKEN_LE:
+        case TOKEN_GT:
+        case TOKEN_GE:
+            next_token();
+            break;
+        default:
+            error("Expected relational operator");
+            break;
     }
 }
 
