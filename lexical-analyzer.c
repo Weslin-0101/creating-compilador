@@ -37,6 +37,13 @@ typedef enum {
     TOKEN_COMMA,
     TOKEN_LESS_EQUAL,
     TOKEN_STRING_VALUE,
+    TOKEN_IF,
+    TOKEN_THEN,
+    TOKEN_ELSE,
+    TOKEN_FOR,
+    TOKEN_TO,
+    TOKEN_REPEAT,
+    TOKEN_UNTIL,
     TOKEN_UNKNOWN,
     TOKEN_EOF
 } TokenType;
@@ -68,6 +75,10 @@ void expression();
 void assignment_statement();
 void while_statement();
 void write_statement();
+void writeln_statement();
+void if_statement();
+void for_statement();
+void repeat_statement();
 void simple_expression();
 void term();
 void factor();
@@ -119,6 +130,20 @@ void next_token() {
             current_token.type = TOKEN_WHILE;
         } else if (strcmp(current_token.lexeme, "do") == 0) {
             current_token.type = TOKEN_DO;
+        } else if (strcmp(current_token.lexeme, "if") == 0) {
+            current_token.type = TOKEN_IF;
+        } else if (strcmp(current_token.lexeme, "then") == 0) {
+            current_token.type = TOKEN_THEN;
+        } else if (strcmp(current_token.lexeme, "else") == 0) {
+            current_token.type = TOKEN_ELSE;
+        } else if (strcmp(current_token.lexeme, "for") == 0) {
+            current_token.type = TOKEN_FOR;
+        } else if (strcmp(current_token.lexeme, "to") == 0) {
+            current_token.type = TOKEN_TO;
+        } else if (strcmp(current_token.lexeme, "repeat") == 0) {
+            current_token.type = TOKEN_REPEAT;
+        } else if (strcmp(current_token.lexeme, "until") == 0) {
+            current_token.type = TOKEN_UNTIL;
         } else {
             current_token.type = TOKEN_IDENTIFIER;
         }
@@ -148,6 +173,23 @@ void next_token() {
         }
 
         if (c == '\'') {
+            current_token.lexeme[i++] = c;
+        }
+        current_token.lexeme[i] = '\0';
+        current_token.type = TOKEN_STRING_VALUE;
+        return;
+    }
+
+    if (c == '"') {
+        int i = 0;
+        current_token.lexeme[i++] = c;
+        c = fgetc(source);
+        while (c != EOF && c != '"') {
+            current_token.lexeme[i++] = c;
+            c = fgetc(source);
+        }
+
+        if (c == '"') {
             current_token.lexeme[i++] = c;
         }
         current_token.lexeme[i] = '\0';
@@ -228,6 +270,7 @@ void match(TokenType expected) {
     if (current_token.type == expected) {
         next_token();
     } else {
+        fprintf(stderr, "Syntax error: expected %d, got %d\n", expected, current_token.type);
         error("Unexpected token");
     }
 }
@@ -330,10 +373,19 @@ void statement() {
             write_statement();
             break;
         case TOKEN_WRITELN:
-            write_statement();
+            writeln_statement();
             break;
         case TOKEN_WHILE:
             while_statement();
+            break;
+        case TOKEN_IF:
+            if_statement();
+            break;
+        case TOKEN_FOR:
+            for_statement();
+            break;
+        case TOKEN_REPEAT:
+            repeat_statement();
             break;
         default:
             error("Unexpected statement");
@@ -357,6 +409,35 @@ void optional_assignment_sequence() {
     }
 }
 
+void if_statement() {
+    match(TOKEN_IF);
+    expression();
+    match(TOKEN_THEN);
+    statement();
+    if (current_token.type == TOKEN_ELSE) {
+        match(TOKEN_ELSE);
+        statement();
+    }
+}
+
+void for_statement() {
+    match(TOKEN_FOR);
+    identifier();
+    match(TOKEN_ASSIGN);
+    expression();
+    match(TOKEN_TO);
+    expression();
+    match(TOKEN_DO);
+    statement();
+}
+
+void repeat_statement() {
+    match(TOKEN_REPEAT);
+    statement();
+    match(TOKEN_UNTIL);
+    expression();
+}
+
 void while_statement() {
     match(TOKEN_WHILE);
     expression();
@@ -367,6 +448,17 @@ void while_statement() {
 void write_statement() {
     TokenType write_type = current_token.type;
     match(write_type);
+    match(TOKEN_LPAREN);
+    expression();
+    while (current_token.type == TOKEN_COMMA) {
+        match(TOKEN_COMMA);
+        expression();
+    }
+    match(TOKEN_RPAREN);
+}
+
+void writeln_statement() {
+    match(TOKEN_WRITELN);
     match(TOKEN_LPAREN);
     expression();
     while (current_token.type == TOKEN_COMMA) {
