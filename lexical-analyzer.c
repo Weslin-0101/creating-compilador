@@ -434,6 +434,9 @@ void for_statement() {
 void repeat_statement() {
     match(TOKEN_REPEAT);
     statement();
+    if (current_token.type == TOKEN_SEMICOLON) {
+        match(TOKEN_SEMICOLON);
+    }
     match(TOKEN_UNTIL);
     expression();
 }
