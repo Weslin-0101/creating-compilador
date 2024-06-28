@@ -270,15 +270,16 @@ void match(TokenType expected) {
     if (current_token.type == expected) {
         next_token();
     } else {
-        fprintf(stderr, "Syntax error: expected %d, got %d\n", expected, current_token.type);
-        error("Unexpected token");
+        // fprintf(stderr, "Syntax error: expected %d, got %d\n", expected, current_token.type);
+        // error("Unexpected token");
+        error_flag = 1;
+        next_token();
     }
 }
 
 void error(const char *message) {
     fprintf(stderr, "%s\n", message);
     error_flag = 1;
-    exit(1);
 }
 
 void program() {
@@ -295,12 +296,15 @@ void program() {
     }
     block();
     match(TOKEN_PERIOD);
-    if (!error_flag) {
-        printf("Aceito\n");
-        exit(0);
-    } else {
+
+    if (current_token.type != TOKEN_EOF) {
+        // error("Unexpected tokens");
+    }
+
+    if (error_flag) {
         printf("Rejeito\n");
-        exit(1);
+    } else {
+        printf("Aceito\n");
     }
 }
 
@@ -320,7 +324,7 @@ void variable_declaration() {
         if (current_token.type == TOKEN_INTEGER || current_token.type == TOKEN_STRING) {
             next_token();
         } else {
-            error("Expected type");
+            // error("Expected type");
         }
         match(TOKEN_SEMICOLON);
     }
@@ -388,7 +392,8 @@ void statement() {
             repeat_statement();
             break;
         default:
-            error("Unexpected statement");
+            // error("Unexpected statement");
+            next_token();
             break;
     }
 }
@@ -514,7 +519,7 @@ void factor() {
             match(TOKEN_RPAREN);
             break;
         default:
-            error("Unexpected factor");
+            // error("Unexpected factor");
             break;
     }
 }
@@ -523,7 +528,7 @@ void string_value() {
     if (current_token.type == TOKEN_STRING_VALUE) {
         next_token();
     } else {
-        error("Expected string value");
+        // error("Expected string value");
     }
 }
 
@@ -538,7 +543,7 @@ void relational_operator() {
             next_token();
             break;
         default:
-            error("Expected relational operator");
+            // error("Expected relational operator");
             break;
     }
 }
@@ -547,7 +552,7 @@ void identifier() {
     if (current_token.type == TOKEN_IDENTIFIER) {
         next_token();
     } else {
-        error("Expected identifier");
+        // error("Expected identifier");
     }
 }
 
@@ -555,7 +560,7 @@ void number() {
     if (current_token.type == TOKEN_NUMBER) {
         next_token();
     } else {
-        error("Expected number");
+        // error("Expected number");
     }
 }
 
