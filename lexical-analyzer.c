@@ -7,6 +7,7 @@ typedef enum {
     TOKEN_PROGRAM,
     TOKEN_VAR,
     TOKEN_INTEGER,
+    TOKEN_STRING,
     TOKEN_IDENTIFIER,
     TOKEN_NUMBER,
     TOKEN_BEGIN,
@@ -35,6 +36,7 @@ typedef enum {
     TOKEN_RPAREN,
     TOKEN_COMMA,
     TOKEN_LESS_EQUAL,
+    TOKEN_STRING_VALUE,
     TOKEN_UNKNOWN,
     TOKEN_EOF
 } TokenType;
@@ -61,6 +63,7 @@ void identifier();
 void identifier_list();
 void parameter_list();
 void number();
+void string_value();
 void expression();
 void assignment_statement();
 void while_statement();
@@ -98,6 +101,8 @@ void next_token() {
             current_token.type = TOKEN_VAR;
         } else if (strcmp(current_token.lexeme, "integer") == 0) {
             current_token.type = TOKEN_INTEGER;
+        } else if (strcmp(current_token.lexeme, "string") == 0) {
+            current_token.type = TOKEN_STRING;
         } else if (strcmp(current_token.lexeme, "begin") == 0) {
             current_token.type = TOKEN_BEGIN;
         } else if (strcmp(current_token.lexeme, "end") == 0) {
@@ -130,6 +135,23 @@ void next_token() {
         ungetc(c, source);
         current_token.lexeme[i] = '\0';
         current_token.type = TOKEN_NUMBER;
+        return;
+    }
+
+    if (c == '\'') {
+        int i = 0;
+        current_token.lexeme[i++] = c;
+        c = fgetc(source);
+        while (c != EOF && c != '\'') {
+            current_token.lexeme[i++] = c;
+            c = fgetc(source);
+        }
+
+        if (c == '\'') {
+            current_token.lexeme[i++] = c;
+        }
+        current_token.lexeme[i] = '\0';
+        current_token.type = TOKEN_STRING_VALUE;
         return;
     }
     
@@ -206,7 +228,6 @@ void match(TokenType expected) {
     if (current_token.type == expected) {
         next_token();
     } else {
-        fprintf(stderr, "Expected %d, got %d\n", expected, current_token.type);
         error("Unexpected token");
     }
 }
@@ -253,7 +274,7 @@ void variable_declaration() {
     while (current_token.type == TOKEN_IDENTIFIER) {
         identifier_list();
         match(TOKEN_COLON);
-        if (current_token.type == TOKEN_INTEGER) {
+        if (current_token.type == TOKEN_INTEGER || current_token.type == TOKEN_STRING) {
             next_token();
         } else {
             error("Expected type");
@@ -291,9 +312,6 @@ void statement_list() {
 void statement() {
     switch (current_token.type) {
         case TOKEN_IDENTIFIER:
-            // identifier();
-            // match(TOKEN_ASSIGN);
-            // expression();
             assignment_statement();
             break;
         case TOKEN_READ:
@@ -309,35 +327,18 @@ void statement() {
             match(TOKEN_RPAREN);
             break;
         case TOKEN_WRITE:
-            // match(TOKEN_WRITE);
-            // match(TOKEN_LPAREN);
-            // expression();
-            // match(TOKEN_RPAREN);
-            // break;
+            write_statement();
+            break;
         case TOKEN_WRITELN:
-            // match(TOKEN_WRITELN);
-            // match(TOKEN_LPAREN);
-            // expression();
-            // match(TOKEN_RPAREN);
             write_statement();
             break;
         case TOKEN_WHILE:
-            // match(TOKEN_WHILE);
-            // expression();
-            // match(TOKEN_LESS_EQUAL);
-            // expression();
-            // match(TOKEN_DO);
-            // block();
             while_statement();
             break;
         default:
             error("Unexpected statement");
             break;
     }
-    // match(TOKEN_WRITE);
-    // match(TOKEN_LPAREN);
-    // number();
-    // match(TOKEN_RPAREN);
 }
 
 void assignment_statement() {
@@ -345,12 +346,6 @@ void assignment_statement() {
     match(TOKEN_ASSIGN);
     expression();
     optional_assignment_sequence();
-    // while (current_token.type == TOKEN_COMMA) {
-    //     match(TOKEN_COMMA);
-    //     identifier();
-    //     match(TOKEN_ASSIGN);
-    //     expression();
-    // }
 }
 
 void optional_assignment_sequence() {
@@ -415,6 +410,9 @@ void factor() {
         case TOKEN_NUMBER:
             number();
             break;
+        case TOKEN_STRING_VALUE:
+            string_value();
+            break;
         case TOKEN_LPAREN:
             match(TOKEN_LPAREN);
             expression();
@@ -423,6 +421,14 @@ void factor() {
         default:
             error("Unexpected factor");
             break;
+    }
+}
+
+void string_value() {
+    if (current_token.type == TOKEN_STRING_VALUE) {
+        next_token();
+    } else {
+        error("Expected string value");
     }
 }
 
