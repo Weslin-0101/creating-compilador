@@ -44,6 +44,8 @@ typedef enum {
     TOKEN_TO,
     TOKEN_REPEAT,
     TOKEN_UNTIL,
+    TOKEN_AND,
+    TOKEN_OR,
     TOKEN_UNKNOWN,
     TOKEN_EOF
 } TokenType;
@@ -53,13 +55,21 @@ typedef struct {
     char lexeme[256];
 } Token;
 
+typedef struct Variable {
+    char name[256];
+    struct Variable *next;
+} Variable;
+
 FILE *source;
 Token current_token;
 int error_flag = 0;
+Variable *variables = NULL;
 
 void next_token();
 void match(TokenType expected);
 void error(const char *message);
+void declare_variable(const char *name);
+int is_declared(const char *name);
 
 void program();
 void block();
@@ -144,6 +154,10 @@ void next_token() {
             current_token.type = TOKEN_REPEAT;
         } else if (strcmp(current_token.lexeme, "until") == 0) {
             current_token.type = TOKEN_UNTIL;
+        } else if (strcmp(current_token.lexeme, "and") == 0) {
+            current_token.type = TOKEN_AND;
+        } else if (strcmp(current_token.lexeme, "or") == 0) {
+            current_token.type = TOKEN_OR;
         } else {
             current_token.type = TOKEN_IDENTIFIER;
         }
@@ -271,7 +285,7 @@ void match(TokenType expected) {
         next_token();
     } else {
         // fprintf(stderr, "Syntax error: expected %d, got %d\n", expected, current_token.type);
-        // error("Unexpected token");
+        error("Unexpected token");
         error_flag = 1;
         next_token();
     }
@@ -280,6 +294,24 @@ void match(TokenType expected) {
 void error(const char *message) {
     fprintf(stderr, "%s\n", message);
     error_flag = 1;
+}
+
+void declare_variable(const char *name) {
+    Variable *new_var = malloc(sizeof(Variable));
+    strcpy(new_var->name, name);
+    new_var->next = variables;
+    variables = new_var;
+}
+
+int is_declared(const char *name) {
+    Variable *current = variables;
+    while (current) {
+        if (strcmp(current->name, name) == 0) {
+            return 1;
+        }
+        current = current->next;
+    }
+    return 0;
 }
 
 void program() {
@@ -331,10 +363,18 @@ void variable_declaration() {
 }
 
 void identifier_list() {
-    identifier();
+    if (current_token.type == TOKEN_IDENTIFIER) {
+        declare_variable(current_token.lexeme);
+        next_token();
+    }
+    // identifier();
     while (current_token.type == TOKEN_COMMA) {
         match(TOKEN_COMMA);
-        identifier();
+        if (current_token.type == TOKEN_IDENTIFIER) {
+            declare_variable(current_token.lexeme);
+            next_token();
+        }
+        // identifier();
     }
 }
 
@@ -399,7 +439,15 @@ void statement() {
 }
 
 void assignment_statement() {
-    identifier();
+    if (current_token.type == TOKEN_IDENTIFIER) {
+        if (!is_declared(current_token.lexeme)) {
+            error("Variable not declared");
+        }
+        next_token();
+    } else {
+        error("Expected identifier");
+    }
+    // identifier();
     match(TOKEN_ASSIGN);
     expression();
     optional_assignment_sequence();
@@ -408,7 +456,15 @@ void assignment_statement() {
 void optional_assignment_sequence() {
     while (current_token.type == TOKEN_COMMA) {
         match(TOKEN_COMMA);
-        identifier();
+        if (current_token.type == TOKEN_IDENTIFIER) {
+            if (!is_declared(current_token.lexeme)) {
+                error("Variable not declared 2");
+            }
+            next_token();
+        } else {
+            error("Expected identifier");
+        }
+        // identifier();
         match(TOKEN_ASSIGN);
         expression();
     }
@@ -427,7 +483,15 @@ void if_statement() {
 
 void for_statement() {
     match(TOKEN_FOR);
-    identifier();
+    if (current_token.type == TOKEN_IDENTIFIER) {
+        if (!is_declared(current_token.lexeme)) {
+            error("Variable not declared 3");
+        }
+        next_token();
+    } else {
+        error("Expected identifier");
+    }
+    // identifier();
     match(TOKEN_ASSIGN);
     expression();
     match(TOKEN_TO);
@@ -505,6 +569,9 @@ void term() {
 void factor() {
     switch (current_token.type) {
         case TOKEN_IDENTIFIER:
+            if (!is_declared(current_token.lexeme)) {
+                error("Variable not declared 4");
+            }
             identifier();
             break;
         case TOKEN_NUMBER:
