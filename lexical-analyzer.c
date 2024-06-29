@@ -88,6 +88,8 @@ void string_value();
 void expression();
 void assignment_statement();
 void while_statement();
+void read_statement();
+void readln_statement();
 void write_statement();
 void writeln_statement();
 void if_statement();
@@ -414,16 +416,14 @@ void statement() {
             assignment_statement();
             break;
         case TOKEN_READ:
-            match(TOKEN_READ);
-            match(TOKEN_LPAREN);
-            identifier();
-            match(TOKEN_RPAREN);
+            // match(TOKEN_READ);
+            // match(TOKEN_LPAREN);
+            // identifier();
+            // match(TOKEN_RPAREN);
+            read_statement();
             break;
         case TOKEN_READLN:
-            match(TOKEN_READLN);
-            match(TOKEN_LPAREN);
-            identifier();
-            match(TOKEN_RPAREN);
+            readln_statement();
             break;
         case TOKEN_WRITE:
             write_statement();
@@ -433,6 +433,9 @@ void statement() {
             break;
         case TOKEN_WHILE:
             while_statement();
+            break;
+        case TOKEN_BEGIN:
+            block();
             break;
         case TOKEN_IF:
             if_statement();
@@ -531,6 +534,29 @@ void while_statement() {
     expression();
     match(TOKEN_DO);
     statement();
+}
+
+void read_statement() {
+    TokenType read_type = current_token.type;
+    match(read_type);
+    match(TOKEN_LPAREN);
+    expression();
+    while (current_token.type == TOKEN_COMMA) {
+        match(TOKEN_COMMA);
+        expression();
+    }
+    match(TOKEN_RPAREN);
+}
+
+void readln_statement() {
+    match(TOKEN_READLN);
+    match(TOKEN_LPAREN);
+    expression();
+    while (current_token.type == TOKEN_COMMA) {
+        match(TOKEN_COMMA);
+        expression();
+    }
+    match(TOKEN_RPAREN);
 }
 
 void write_statement() {
