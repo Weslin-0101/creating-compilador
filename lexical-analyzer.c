@@ -4,54 +4,14 @@
 #include <ctype.h>
 
 typedef enum {
-    TOKEN_PROGRAM,
-    TOKEN_VAR,
-    TOKEN_INTEGER,
-    TOKEN_BOOLEAN,
-    TOKEN_TRUE,
-    TOKEN_FALSE,
-    TOKEN_STRING,
-    TOKEN_IDENTIFIER,
-    TOKEN_NUMBER,
-    TOKEN_BEGIN,
-    TOKEN_END,
-    TOKEN_READ,
-    TOKEN_READLN,
-    TOKEN_WRITELN,
-    TOKEN_PLUS,
-    TOKEN_WRITE,
-    TOKEN_WHILE,
-    TOKEN_DO,
-    TOKEN_ASSIGN,
-    TOKEN_MINUS,
-    TOKEN_MULT,
-    TOKEN_DIV,
-    TOKEN_EQ,
-    TOKEN_NEQ,
-    TOKEN_LT,
-    TOKEN_LE,
-    TOKEN_GT,
-    TOKEN_GE,
-    TOKEN_SEMICOLON,
-    TOKEN_COLON,
-    TOKEN_PERIOD,
-    TOKEN_LPAREN,
-    TOKEN_RPAREN,
-    TOKEN_COMMA,
-    TOKEN_LESS_EQUAL,
-    TOKEN_STRING_VALUE,
-    TOKEN_IF,
-    TOKEN_THEN,
-    TOKEN_ELSE,
-    TOKEN_FOR,
-    TOKEN_TO,
-    TOKEN_REPEAT,
-    TOKEN_UNTIL,
-    TOKEN_AND,
-    TOKEN_OR,
-    TOKEN_NOT,
-    TOKEN_UNKNOWN,
-    TOKEN_EOF
+    TOKEN_PROGRAM, TOKEN_VAR, TOKEN_INTEGER, TOKEN_BOOLEAN, TOKEN_TRUE, TOKEN_FALSE,
+    TOKEN_STRING, TOKEN_IDENTIFIER, TOKEN_NUMBER, TOKEN_BEGIN, TOKEN_END, TOKEN_READ,
+    TOKEN_READLN, TOKEN_WRITELN, TOKEN_PLUS, TOKEN_WRITE, TOKEN_WHILE, TOKEN_DO,
+    TOKEN_ASSIGN, TOKEN_MINUS, TOKEN_MULT, TOKEN_DIV, TOKEN_EQ, TOKEN_NEQ,
+    TOKEN_LT, TOKEN_LE, TOKEN_GT, TOKEN_GE, TOKEN_SEMICOLON, TOKEN_COLON,
+    TOKEN_PERIOD, TOKEN_LPAREN, TOKEN_RPAREN, TOKEN_COMMA, TOKEN_LESS_EQUAL, TOKEN_STRING_VALUE,
+    TOKEN_IF, TOKEN_THEN, TOKEN_ELSE, TOKEN_FOR, TOKEN_TO, TOKEN_REPEAT,
+    TOKEN_UNTIL, TOKEN_AND, TOKEN_OR, TOKEN_NOT, TOKEN_UNKNOWN, TOKEN_EOF
 } TokenType;
 
 typedef struct {
@@ -158,6 +118,8 @@ void next_token() {
             current_token.type = TOKEN_FOR;
         } else if (strcmp(current_token.lexeme, "to") == 0) {
             current_token.type = TOKEN_TO;
+        } else if (strcmp(current_token.lexeme, "div") == 0) {
+            current_token.type = TOKEN_DIV;
         } else if (strcmp(current_token.lexeme, "repeat") == 0) {
             current_token.type = TOKEN_REPEAT;
         } else if (strcmp(current_token.lexeme, "until") == 0) {
@@ -244,9 +206,9 @@ void next_token() {
         case '*':
             current_token.type = TOKEN_MULT;
             break;
-        case '/':
-            current_token.type = TOKEN_DIV;
-            break;
+        // case '/':
+        //     current_token.type = TOKEN_DIV;
+        //     break;
         case '=':
             current_token.type = TOKEN_EQ;
             break;
@@ -446,6 +408,9 @@ void statement() {
         case TOKEN_REPEAT:
             repeat_statement();
             break;
+        case TOKEN_NOT:
+            next_token();
+            break;
         default:
             // error("Unexpected statement");
             next_token();
@@ -521,10 +486,16 @@ void for_statement() {
 
 void repeat_statement() {
     match(TOKEN_REPEAT);
-    statement();
-    if (current_token.type == TOKEN_SEMICOLON) {
-        match(TOKEN_SEMICOLON);
-    }
+    do {
+        statement();
+        if (current_token.type == TOKEN_SEMICOLON) {
+            match(TOKEN_SEMICOLON);
+        }
+    } while (current_token.type != TOKEN_UNTIL);
+    // statement();
+    // if (current_token.type == TOKEN_SEMICOLON) {
+    //     match(TOKEN_SEMICOLON);
+    // }
     match(TOKEN_UNTIL);
     expression();
 }
@@ -594,7 +565,7 @@ void expression() {
 
 void simple_expression() {
     term();
-    while (current_token.type == TOKEN_PLUS || current_token.type == TOKEN_MINUS) {
+    while (current_token.type == TOKEN_PLUS || current_token.type == TOKEN_MINUS || current_token.type == TOKEN_OR) {
         next_token();
         term();
     }
@@ -602,7 +573,7 @@ void simple_expression() {
 
 void term() {
     factor();
-    while (current_token.type == TOKEN_MULT || current_token.type == TOKEN_DIV) {
+    while (current_token.type == TOKEN_MULT || current_token.type == TOKEN_DIV || current_token.type == TOKEN_AND || current_token.type == TOKEN_NOT) {
         next_token();
         factor();
     }
