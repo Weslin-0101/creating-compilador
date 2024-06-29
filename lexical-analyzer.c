@@ -7,6 +7,9 @@ typedef enum {
     TOKEN_PROGRAM,
     TOKEN_VAR,
     TOKEN_INTEGER,
+    TOKEN_BOOLEAN,
+    TOKEN_TRUE,
+    TOKEN_FALSE,
     TOKEN_STRING,
     TOKEN_IDENTIFIER,
     TOKEN_NUMBER,
@@ -46,6 +49,7 @@ typedef enum {
     TOKEN_UNTIL,
     TOKEN_AND,
     TOKEN_OR,
+    TOKEN_NOT,
     TOKEN_UNKNOWN,
     TOKEN_EOF
 } TokenType;
@@ -120,9 +124,11 @@ void next_token() {
             current_token.type = TOKEN_PROGRAM;
         } else if (strcmp(current_token.lexeme, "var") == 0) {
             current_token.type = TOKEN_VAR;
-        } else if (strcmp(current_token.lexeme, "integer") == 0) {
+        } else if (strcmp(current_token.lexeme, "integer") == 0 || strcmp(current_token.lexeme, "Integer") == 0) {
             current_token.type = TOKEN_INTEGER;
-        } else if (strcmp(current_token.lexeme, "string") == 0) {
+        } else if (strcmp(current_token.lexeme, "boolean") == 0 || strcmp(current_token.lexeme, "Boolean") == 0) {
+            current_token.type = TOKEN_BOOLEAN;
+        } else if (strcmp(current_token.lexeme, "string") == 0 || strcmp(current_token.lexeme, "String") == 0) {
             current_token.type = TOKEN_STRING;
         } else if (strcmp(current_token.lexeme, "begin") == 0) {
             current_token.type = TOKEN_BEGIN;
@@ -154,10 +160,16 @@ void next_token() {
             current_token.type = TOKEN_REPEAT;
         } else if (strcmp(current_token.lexeme, "until") == 0) {
             current_token.type = TOKEN_UNTIL;
-        } else if (strcmp(current_token.lexeme, "and") == 0) {
+        } else if (strcmp(current_token.lexeme, "and") == 0 || strcmp(current_token.lexeme, "AND") == 0) {
             current_token.type = TOKEN_AND;
-        } else if (strcmp(current_token.lexeme, "or") == 0) {
+        } else if (strcmp(current_token.lexeme, "or") == 0 || strcmp(current_token.lexeme, "OR") == 0) {
             current_token.type = TOKEN_OR;
+        } else if (strcmp(current_token.lexeme, "true") == 0 || strcmp(current_token.lexeme, "True") == 0) {
+            current_token.type = TOKEN_TRUE;
+        } else if (strcmp(current_token.lexeme, "false") == 0 || strcmp(current_token.lexeme, "False") == 0) {
+            current_token.type = TOKEN_FALSE;
+        } else if (strcmp(current_token.lexeme, "not") == 0 || strcmp(current_token.lexeme, "NOT") == 0) {
+            current_token.type = TOKEN_NOT;
         } else {
             current_token.type = TOKEN_IDENTIFIER;
         }
@@ -353,7 +365,7 @@ void variable_declaration() {
     while (current_token.type == TOKEN_IDENTIFIER) {
         identifier_list();
         match(TOKEN_COLON);
-        if (current_token.type == TOKEN_INTEGER || current_token.type == TOKEN_STRING) {
+        if (current_token.type == TOKEN_INTEGER || current_token.type == TOKEN_STRING || current_token.type == TOKEN_BOOLEAN) {
             next_token();
         } else {
             // error("Expected type");
@@ -473,6 +485,10 @@ void optional_assignment_sequence() {
 void if_statement() {
     match(TOKEN_IF);
     expression();
+    if (current_token.type == TOKEN_AND || current_token.type == TOKEN_OR || current_token.type == TOKEN_NOT) {
+        next_token();
+        expression();
+    }
     match(TOKEN_THEN);
     statement();
     if (current_token.type == TOKEN_ELSE) {
@@ -579,6 +595,10 @@ void factor() {
             break;
         case TOKEN_STRING_VALUE:
             string_value();
+            break;
+        case TOKEN_TRUE:
+        case TOKEN_FALSE:
+            next_token();
             break;
         case TOKEN_LPAREN:
             match(TOKEN_LPAREN);
